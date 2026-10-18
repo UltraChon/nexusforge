@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NexusForge - Editor Visual de Nodos de Historia y Gameplay</title>
+  <meta name="description" content="Organizador visual de narrativa ramificada, misiones y mecánicas de gameplay con nodos interactivos.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Barra Superior / Header -->
+    <header class="top-nav">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="6" cy="6" r="3" />
+            <circle cx="18" cy="18" r="3" />
+            <path d="M8.5 8.5L15.5 15.5" />
+            <circle cx="18" cy="6" r="3" />
+            <path d="M15.5 8.5L8.5 15.5" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">NexusForge</h1>
+          <span class="brand-badge">Story & Gameplay Canvas</span>
+        </div>
+      </div>
+
+      <!-- Herramientas de Creación Rápida -->
+      <div class="node-creation-bar">
+        <span class="bar-label">Crear Nodo:</span>
+        <button id="btn-add-story" class="btn-create-node story-btn" title="Añadir nodo de historia, diálogo o lore">
+          <span class="node-icon">📖</span> Historia / Diálogo
+        </button>
+        <button id="btn-add-gameplay" class="btn-create-node gameplay-btn" title="Añadir nodo de combate, puzle, misión o mecánica">
+          <span class="node-icon">⚔️</span> Gameplay / Misión
+        </button>
+        <button id="btn-add-cutscene" class="btn-create-node cutscene-btn" title="Añadir nodo de cinemática o evento scripteado">
+          <span class="node-icon">🎬</span> Cinemática
+        </button>
+        <button id="btn-add-choice" class="btn-create-node choice-btn" title="Añadir nodo de bifurcación o decisión del jugador">
+          <span class="node-icon">🔀</span> Elección / Branch
+        </button>
+      </div>
+
+      <!-- Acciones de Proyecto (Guardado, Imagen, etc.) -->
+      <div class="nav-actions">
+        <button id="btn-open-characters" class="action-btn characters-nav-btn" title="Gestionar fichas de personajes y arcos">
+          <span class="icon">👥</span>
+          <span>Personajes</span>
+          <span id="character-count-badge" class="count-badge">0</span>
+        </button>
+
+        <div class="divider-v"></div>
+
+        <div class="zoom-controls">
+          <button id="btn-zoom-out" class="icon-btn" title="Alejar (Zoom Out)">−</button>
+          <span id="zoom-level" class="zoom-display">100%</span>
+          <button id="btn-zoom-in" class="icon-btn" title="Acercar (Zoom In)">+</button>
+          <button id="btn-zoom-reset" class="icon-btn" title="Centrar Vista">🎯</button>
+        </div>
+
+        <div class="divider-v"></div>
+
+        <button id="btn-export-image" class="action-btn primary-export-btn" title="Exportar diagrama completo como imagen PNG/JPG">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          Exportar Imagen
+        </button>
+
+        <button id="btn-export-json" class="action-btn" title="Exportar estructura en JSON">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          JSON
+        </button>
+
+        <button id="btn-import-json" class="action-btn" title="Cargar archivo JSON">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Cargar
+        </button>
+        <input type="file" id="input-file-json" accept=".json" style="display: none;">
+
+        <button id="btn-clear" class="action-btn danger-btn" title="Limpiar todo el lienzo">
+          🗑️
+        </button>
+      </div>
+    </header>
+
+    <!-- Contenedor Principal: Canvas + Inspector -->
+    <div class="main-workspace">
+      <!-- Lienzo Interactivo -->
+      <div id="canvas-container" class="canvas-container">
+        <!-- Rejilla de Fondo -->
+        <div id="canvas-grid" class="canvas-grid"></div>
+
+        <!-- Capa SVG para Wires / Conexiones -->
+        <svg id="connections-layer" class="connections-layer">
+          <defs>
+            <linearGradient id="wire-gradient-story" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#a855f7" />
+              <stop offset="100%" stop-color="#c084fc" />
+            </linearGradient>
+            <linearGradient id="wire-gradient-gameplay" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#06b6d4" />
+              <stop offset="100%" stop-color="#10b981" />
+            </linearGradient>
+            <linearGradient id="wire-gradient-cutscene" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#f59e0b" />
+              <stop offset="100%" stop-color="#f43f5e" />
+            </linearGradient>
+            <linearGradient id="wire-gradient-choice" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#ec4899" />
+              <stop offset="100%" stop-color="#8b5cf6" />
+            </linearGradient>
+            <filter id="wire-glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <!-- Conexión temporal durante arrastre -->
+          <path id="temp-connection" class="temp-connection" d="" />
+        </svg>
+
+        <!-- Capa de Nodos DOM -->
+        <div id="nodes-layer" class="nodes-layer">
+          <!-- Los nodos se generan dinámicamente aquí -->
+        </div>
+
+        <!-- Barra de Filtro de Personajes en el Lienzo -->
+        <div id="character-filter-bar" class="character-filter-bar">
+          <span class="filter-label">Filtro Personaje:</span>
+          <div id="filter-pills-list" class="filter-pills-list">
+            <!-- Botones tipo píldora generados dinámicamente -->
+          </div>
+          <button id="btn-clear-filter" class="btn-clear-filter" style="display:none;" title="Mostrar todos los nodos">✕ Quitar Filtro</button>
+        </div>
+
+        <!-- Banner de Filtro Activo -->
+        <div id="active-filter-banner" class="active-filter-banner" style="display: none;">
+          <span id="active-filter-text">Viendo arco de Kaelen (2 escenas)</span>
+          <button id="btn-focus-filter-nodes" class="btn-banner-action">🎯 Centrar en sus Nodos</button>
+          <button id="btn-close-filter-banner" class="btn-banner-close">✕</button>
+        </div>
+
+        <!-- Mensaje / Guía flotante -->
+        <div class="canvas-tips">
+          <span>💡 <b>Arrastra</b> para mover nodos • <b>Click en puerto</b> para conectar • <b>Click derecho / Rueda</b> para navegar • <b>Doble click</b> en cable para eliminarlo</span>
+        </div>
+
+        <!-- Indicador de autoguardado -->
+        <div id="save-indicator" class="save-indicator">
+          <span class="indicator-dot"></span> Guardado local activo
+        </div>
+      </div>
+
+      <!-- Panel Lateral / Inspector de Nodo Seleccionado -->
+      <aside id="inspector-panel" class="inspector-panel">
+        <div class="inspector-header">
+          <div class="inspector-title-wrap">
+            <span id="inspector-type-badge" class="type-badge story">HISTORIA</span>
+            <h2 id="inspector-title-display">Selecciona un nodo</h2>
+          </div>
+          <button id="btn-close-inspector" class="icon-btn-sm" title="Cerrar panel">✕</button>
+        </div>
+
+        <div id="inspector-empty" class="inspector-empty-state">
+          <div class="empty-icon">🖱️</div>
+          <p>Haz clic en cualquier nodo para editar sus propiedades, narrativa, objetivos o ramificaciones.</p>
+        </div>
+
+        <form id="inspector-form" class="inspector-form" style="display: none;">
+          <input type="hidden" id="edit-node-id">
+
+          <div class="form-group">
+            <label for="edit-title">Título del Nodo</label>
+            <input type="text" id="edit-title" class="form-input" placeholder="Ej: Diálogo con el Anciano">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-type">Tipo de Nodo</label>
+              <select id="edit-type" class="form-select">
+                <option value="story">📖 Historia / Diálogo</option>
+                <option value="gameplay">⚔️ Gameplay / Misión</option>
+                <option value="cutscene">🎬 Cinemática</option>
+                <option value="choice">🔀 Elección de Jugador</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="edit-status">Estado</label>
+              <select id="edit-status" class="form-select">
+                <option value="idea">💡 En Idea</option>
+                <option value="wip">⏳ En Desarrollo</option>
+                <option value="ready">✅ Listo / Aprobado</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Gestión Multi-Personaje en el Nodo -->
+          <div class="form-group node-characters-manager">
+            <div class="label-with-action">
+              <label>Personajes en este Nodo</label>
+              <button type="button" id="btn-quick-new-char" class="text-link-btn">+ Crear Nuevo</button>
+            </div>
+            <!-- Contenedor de Chips de Personajes Seleccionados -->
+            <div id="node-characters-chips" class="node-characters-chips">
+              <!-- Chips generados dinámicamente -->
+            </div>
+            <!-- Selector para añadir otro personaje -->
+            <div class="add-character-row">
+              <select id="select-add-character-to-node" class="form-select">
+                <option value="">+ Añadir personaje a la escena...</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Campos Específicos según tipo -->
+          <div id="section-story" class="type-specific-section">
+            <div class="form-group">
+              <label for="edit-synopsis">Sinopsis / Guión / Diálogo</label>
+              <textarea id="edit-synopsis" class="form-textarea" rows="4" placeholder="Escribe el diálogo o la trama de esta escena..."></textarea>
+            </div>
+          </div>
+
+          <div id="section-gameplay" class="type-specific-section">
+            <div class="form-group">
+              <label for="edit-mechanic">Mecánica / Tipo de Desafío</label>
+              <input type="text" id="edit-mechanic" class="form-input" placeholder="Ej: Combate contra Boss, Puzle de palancas, Sigilo">
+            </div>
+            <div class="form-group">
+              <label for="edit-objective">Objetivo para el Jugador</label>
+              <textarea id="edit-objective" class="form-textarea" rows="3" placeholder="Ej: Sobrevivir 2 minutos y recolectar la llave de la torre..."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="edit-reward">Recompensa / Desbloqueo</label>
+              <input type="text" id="edit-reward" class="form-input" placeholder="Ej: Amuleto de Fuego, Acceso a Catacumbas">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="edit-tags">Etiquetas (separadas por coma)</label>
+            <input type="text" id="edit-tags" class="form-input" placeholder="Ej: Prólogo, Acto 1, Crítico, Tutorial">
+          </div>
+
+          <div class="form-group">
+            <label for="edit-notes">Notas del Diseñador</label>
+            <textarea id="edit-notes" class="form-textarea" rows="2" placeholder="Notas internas de diseño, dudas o referencias técnicas..."></textarea>
+          </div>
+
+          <div class="inspector-actions">
+            <button type="button" id="btn-duplicate-node" class="btn-secondary">Duplicar Nodo</button>
+            <button type="button" id="btn-delete-node" class="btn-danger">Eliminar Nodo</button>
+          </div>
+        </form>
+      </aside>
+    </div>
+
+    <!-- Modal para Exportación de Imagen (JPG / PNG) -->
+    <div id="modal-export" class="modal-backdrop" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>📸 Exportar Diagrama como Imagen</h3>
+          <button id="btn-modal-close" class="icon-btn-sm">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-desc">Genera una captura de alta resolución de todos tus nodos y conexiones para compartir con tu equipo.</p>
+          
+          <div class="export-preview-box">
+            <canvas id="export-canvas-preview"></canvas>
+            <div id="export-loading-spinner" class="export-spinner" style="display: none;">Generando imagen...</div>
+          </div>
+
+          <div class="export-options">
+            <div class="option-row">
+              <label>Formato:</label>
+              <div class="radio-group">
+                <label><input type="radio" name="export-format" value="png" checked> PNG (Alta nitidez)</label>
+                <label><input type="radio" name="export-format" value="jpeg"> JPG (Ligero)</label>
+              </div>
+            </div>
+            <div class="option-row">
+              <label>Resolución:</label>
+              <select id="export-scale" class="form-select">
+                <option value="1">1x (Tamaño estándar)</option>
+                <option value="1.5" selected>1.5x (Excelente nitidez para presentaciones)</option>
+                <option value="2">2x (Ultra HD para imprimir o póster)</option>
+              </select>
+            </div>
+            <div class="option-row">
+              <label>Fondo:</label>
+              <div class="radio-group">
+                <label><input type="radio" name="export-bg" value="dark" checked> Oscuro Studio</label>
+                <label><input type="radio" name="export-bg" value="transparent"> Transparente (PNG)</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-cancel-modal" class="btn-secondary">Cancelar</button>
+          <button id="btn-download-image" class="action-btn primary-export-btn">⬇️ Descargar Imagen</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal para Gestión y Fichas de Personajes -->
+    <div id="modal-characters" class="modal-backdrop" style="display: none;">
+      <div class="modal-card modal-card-large">
+        <div class="modal-header">
+          <div class="header-with-badge">
+            <span class="modal-header-icon">👥</span>
+            <div>
+              <h3>Fichas de Personajes</h3>
+              <p class="modal-subtitle">Gestiona el elenco, motivaciones y rastrea su arco en los nodos de la historia</p>
+            </div>
+          </div>
+          <div class="modal-header-actions">
+            <button id="btn-create-character" class="action-btn primary-export-btn">+ Nuevo Personaje</button>
+            <button id="btn-close-characters-modal" class="icon-btn-sm">✕</button>
+          </div>
+        </div>
+
+        <div class="modal-body modal-characters-body">
+          <!-- Columna Izquierda: Lista de Personajes -->
+          <div class="characters-list-column">
+            <div class="char-search-box">
+              <input type="text" id="input-search-character" class="form-input" placeholder="Buscar personaje...">
+            </div>
+            <div id="character-items-container" class="character-items-container">
+              <!-- Se pueblan dinámicamente -->
+            </div>
+          </div>
+
+          <!-- Columna Derecha: Ficha de Detalle / Editor -->
+          <div class="character-sheet-column">
+            <div id="character-sheet-empty" class="character-sheet-empty">
+              <span>👤</span>
+              <p>Selecciona un personaje de la lista o crea uno nuevo para ver su ficha completa.</p>
+            </div>
+
+            <form id="character-sheet-form" class="character-sheet-form" style="display: none;">
+              <input type="hidden" id="char-id">
+
+              <!-- Fila superior: Avatar, Color, Nombre y Rol -->
+              <div class="char-header-edit">
+                <div class="char-avatar-picker-wrap">
+                  <div id="char-avatar-preview" class="char-avatar-large">🧙‍♂️</div>
+                  <input type="hidden" id="char-avatar" value="🧙‍♂️">
+                  <div class="avatar-emoji-presets">
+                    <button type="button" class="btn-emoji-preset" data-emoji="🗡️">🗡️</button>
+                    <button type="button" class="btn-emoji-preset" data-emoji="🧙‍♂️">🧙‍♂️</button>
+                    <button type="button" class="btn-emoji-preset" data-emoji="🧝‍♀️">🧝‍♀️</button>
+                    <button type="button" class="btn-emoji-preset" data-emoji="👑">👑</button>
+                    <button type="button" class="btn-emoji-preset" data-emoji="🦹">🦹</button>
+                    <button type="button" class="btn-emoji-preset" data-emoji="🤖">🤖</button>
+                    <button type="button" class="btn-emoji-preset" data-emoji="🎭">🎭</button>
+                    <button type="button" class="btn-emoji-preset" data-emoji="🛡️">🛡️</button>
+                  </div>
+                </div>
+
+                <div class="char-name-role-group">
+                  <div class="form-group">
+                    <label for="char-name">Nombre del Personaje</label>
+                    <input type="text" id="char-name" class="form-input" placeholder="Ej: Kaelen Sombradoble" required>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="char-role">Rol en el Juego</label>
+                      <select id="char-role" class="form-select">
+                        <option value="Protagonista">Protagonista</option>
+                        <option value="Antagonista">Antagonista</option>
+                        <option value="Aliado">Aliado / Compañero</option>
+                        <option value="Mentor">Mentor / Guía</option>
+                        <option value="Secundario">Secundario / NPC</option>
+                        <option value="Boss">Jefe / Boss de Nivel</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label for="char-color">Color Distintivo</label>
+                      <select id="char-color" class="form-select">
+                        <option value="#a855f7">🟣 Amatista / Místico</option>
+                        <option value="#06b6d4">🔵 Cyan / Tecnológico</option>
+                        <option value="#10b981">🟢 Esmeralda / Naturaleza</option>
+                        <option value="#f59e0b">🟡 Oro / Nobleza</option>
+                        <option value="#ec4899">🌸 Rosa / Pasión</option>
+                        <option value="#ef4444">🔴 Carmesí / Peligro</option>
+                        <option value="#64748b">⚪ Plateado / Neutral</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Motivación y Personalidad -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="char-motivation">Motivación / Objetivo Principal</label>
+                  <input type="text" id="char-motivation" class="form-input" placeholder="Ej: Vengar la destrucción de su gremio">
+                </div>
+                <div class="form-group">
+                  <label for="char-archetype">Personalidad / Rasgos</label>
+                  <input type="text" id="char-archetype" class="form-input" placeholder="Ej: Cínica, calculadora pero leal">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="char-bio">Biografía y Trasfondo (Lore)</label>
+                <textarea id="char-bio" class="form-textarea" rows="3" placeholder="Historia pasada, secretos, relaciones con otros personajes..."></textarea>
+              </div>
+
+              <!-- Lista de Nodos / Escenas en los que participa -->
+              <div class="char-nodes-participating-wrap">
+                <div class="section-title-row">
+                  <label>Apariciones en la Historia y Gameplay</label>
+                  <span id="char-participating-count" class="count-tag">0 escenas</span>
+                </div>
+                <div id="char-participating-nodes" class="participating-nodes-list">
+                  <!-- Se listan dinámicamente -->
+                </div>
+              </div>
+
+              <!-- Botones de Acción de la Ficha -->
+              <div class="char-sheet-footer">
+                <button type="button" id="btn-filter-this-character" class="action-btn primary-export-btn">
+                  🔍 Filtrar e Ir a sus Nodos en el Lienzo
+                </button>
+                <button type="button" id="btn-delete-character" class="btn-danger">
+                  Eliminar Ficha
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
